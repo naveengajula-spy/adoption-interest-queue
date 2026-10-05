@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ENG-22666: Adoption Interest Queue</title>
+  <style>
+    /* -------------------------------------------------------------
+       Monochromatic Corporate Design System & Design Tokens
+       ------------------------------------------------------------- */
+    :root {
+      --color-bg-base: #f8f9fa;
+      --color-bg-surface: #ffffff;
+      --color-bg-muted: #e9ecef;
+      --color-text-primary: #121212;
+      --color-text-secondary: #495057;
+      --color-text-muted: #6c757d;
+      --color-border: #ced4da;
+      --color-border-dark: #212529;
+      --color-primary: #121212;
+      --color-primary-hover: #343a40;
+      --color-error: #d90429;
+      --color-error-bg: #fdf0f0;
+      --color-focus: #000000;
+      --color-warning-bg: #fff3cd;
+      --color-warning-text: #856404;
+      
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--color-bg-base);
+      color: var(--color-text-primary);
+      line-height: 1.5;
+      padding: var(--spacing-lg);
+    }
+
+    .app-container {
+      max-width: 1080px;
+      margin: 0 auto;
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--spacing-xl);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    /* Header Section */
+    header {
+      border-bottom: 2px solid var(--color-primary);
+      padding-bottom: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    .ticket-badge {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--color-bg-muted);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    /* Controls & Simulation Panel */
+    .network-sim-panel {
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      font-size: 0.875rem;
+      margin-left: auto;
+    }
+
+    /* Layout Columns */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--spacing-xl);
+    }
+
+    @media (min-width: 840px) {
+      .main-grid {
+        grid-template-columns: 360px 1fr;
+      }
+    }
+
+    /* Form Styles */
+    .form-card {
+      border: 1px solid var(--color-border);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-md);
+      background: var(--color-bg-surface);
+    }
+
+    .form-card h2 {
+      font-size: 1.25rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-md);
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px var(--spacing-md);
+      font-size: 0.95rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-surface);
+      color: var(--color-text-primary);
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus, button:focus {
+      outline: 2px solid var(--color-focus);
+      outline-offset: 2px;
+    }
+
+    /* Unhappy Path Validation Error */
+    .has-error input, .has-error select, .has-error textarea {
+      border-color: var(--color-error);
+      background-color: var(--color-error-bg);
+    }
+
+    .error-msg {
+      color: var(--color-error);
+      font-size: 0.75rem;
+      margin-top: var(--spacing-xs);
+      display: none;
+    }
+
+    .has-error .error-msg {
+      display: block;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px var(--spacing-md);
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 1px solid var(--color-primary);
+      border-radius: var(--radius-sm);
+      background: var(--color-primary);
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      width: 100%;
+    }
+
+    .btn:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--color-text-primary);
+      border-color: var(--color-border-dark);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-bg-muted);
+    }
+
+    /* Queue Table & List */
+    .queue-section {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .queue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+    }
+
+    .search-filter-box {
+      display: flex;
+      gap: var(--spacing-sm);
+      width: 100%;
+    }
+
+    .queue-list {
+      list-style: none;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .queue-item {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--color-bg-surface);
+    }
+
+    .queue-item:last-child {
+      border-bottom: none;
+    }
+
+    .queue-info h3 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .queue-meta {
+      font-size: 0.8125rem;
+      color: var(--color-text-secondary);
+      margin-top: var(--spacing-xs);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      background: var(--color-bg-muted);
+      border: 1px solid var(--color-border);
+    }
+
+    .badge-offline {
+      background: var(--color-warning-bg);
+      color: var(--color-warning-text);
+      border-color: #ffeba3;
+    }
+
+    /* Status Banner for Offline Mode */
+    .offline-alert-banner {
+      background: var(--color-warning-bg);
+      color: var(--color-warning-text);
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* States: Loading & Empty States */
+    .state-container {
+      padding: var(--spacing-xl);
+      text-align: center;
+      background: var(--color-bg-surface);
+      border: 1px dashed var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto var(--spacing-md) auto;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <div>
+        <span class="ticket-badge">Ticket: ENG-22666</span>
+        <h1>Adoption Interest Queue</h1>
+      </div>
+      
+      <!-- Network Simulation Controls -->
+      <div class="network-sim-panel" aria-label="Simulation Settings">
+        <label for="sim-network" style="margin: 0;">Simulate Network:</label>
+        <select id="sim-network" aria-label="Select Network Latency Simulation">
+          <option value="online">Online (Fast)</option>
+          <option value="slow3g">Slow 3G (1.5s Delay)</option>
+          <option value="offline">Offline Mode (Local Storage Sync)</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Offline Notification Banner (Appears dynamically in offline mode) -->
+    <div id="offline-banner" class="offline-alert-banner" style="display: none;">
+      <span>⚠️ You are currently in Offline Mode. All additions/removals are saved locally to storage.</span>
+    </div>
+
+    <main class="main-grid">
+      <!-- Section 1: Form Input -->
+      <section class="form-card" aria-labelledby="form-heading">
+        <h2 id="form-heading">Add Interest Entry</h2>
+        
+        <form id="adoption-form" novalidate>
+          <div class="form-group" id="group-pet-name">
+            <label for="input-pet-name">Animal Name / ID *</label>
+            <input type="text" id="input-pet-name" name="petName" required aria-required="true" aria-describedby="err-pet-name">
+            <span class="error-msg" id="err-pet-name">Please specify a valid pet name or ID.</span>
+          </div>
+
+          <div class="form-group" id="group-applicant-name">
+            <label for="input-applicant-name">Applicant Full Name *</label>
+            <input type="text" id="input-applicant-name" name="applicantName" required aria-required="true" aria-describedby="err-applicant-name">
+            <span class="error-msg" id="err-applicant-name">Applicant name is required.</span>
+          </div>
+
+          <div class="form-group" id="group-contact">
+            <label for="input-contact">Contact Phone/Email *</label>
+            <input type="text" id="input-contact" name="contact" required aria-required="true" aria-describedby="err-contact">
+            <span class="error-msg" id="err-contact">Enter a valid 10-digit phone number or email address.</span>
+          </div>
+
+          <div class="form-group" id="group-priority">
+            <label for="select-priority">Priority Status</label>
+            <select id="select-priority" name="priority">
+              <option value="Standard">Standard Waitlist</option>
+              <option value="High">High Priority (Approved Home)</option>
+              <option value="Urgent">Urgent (Foster Ready)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn" id="submit-btn" aria-label="Submit adoption interest entry to queue">
+            <span>Add to Queue</span>
+          </button>
+        </form>
+      </section>
+
+      <!-- Section 2: Queue List & Search Engine -->
+      <section class="queue-section" aria-labelledby="queue-heading">
+        <div class="queue-header">
+          <h2 id="queue-heading">Active Queue Index</h2>
+          <span id="queue-count-badge" class="badge">0 entries</span>
+        </div>
+
+        <div class="search-filter-box">
+          <input type="text" id="input-search" placeholder="Filter by Pet or Applicant Name..." aria-label="Filter queue entries by name">
+        </div>
+
+        <!-- Live Region Accessibility Announcement -->
+        <div id="sr-announcer" class="sr-only" aria-live="polite"></div>
+
+        <!-- Dynamic Content Mount Point -->
+        <div id="queue-content-mount"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    /**
+     * Core Enterprise JS Engine - Pure Vanilla JavaScript (ES6+)
+     * Ticket: ENG-22666 (Includes Offline First Architecture)
+     */
+    (function () {
+      'use strict';
+
+      // --- STATE ENGINE ---
+      const state = {
+        queue: JSON.parse(localStorage.getItem('adoption_queue_data') || '[]'),
+        filterQuery: '',
+        isLoading: false,
+        networkMode: 'online' // 'online', 'slow3g', 'offline'
+      };
+
+      // --- DOM REFERENCES ---
+      const form = document.getElementById('adoption-form');
+      const mountPoint = document.getElementById('queue-content-mount');
+      const searchInput = document.getElementById('input-search');
+      const networkSelect = document.getElementById('sim-network');
+      const countBadge = document.getElementById('queue-count-badge');
+      const announcer = document.getElementById('sr-announcer');
+      const offlineBanner = document.getElementById('offline-banner');
+
+      // --- SECURITY & SANITIZATION (XSS Prevention) ---
+      function sanitizeInput(str) {
+        if (!str) return '';
+        const temp = document.createElement('div');
+        temp.textContent = str;
+        return temp.innerHTML.trim();
+      }
+
+      // --- TELEMETRY SIMULATION ENGINE ---
+      function logTelemetry(actionName, payload = {}) {
+        const timestamp = new Date().toISOString();
+        console.log(`[Analytics] [${timestamp}] User Action: ${actionName}`, payload);
+      }
+
+      // --- STORAGE PERSISTENCE ENGINE ---
+      function persistState() {
+        localStorage.setItem('adoption_queue_data', JSON.stringify(state.queue));
+      }
+
+      // --- ACCESSIBILITY ANNOUNCER ---
+      function announceToSR(message) {
+        announcer.textContent = message;
+      }
+
+      // --- OFFLINE-FIRST NETWORK SIMULATOR ---
+      function simulateNetworkOperation(operationCallback) {
+        return new Promise((resolve) => {
+          // In Offline Mode, we perform local storage updates directly without failing
+          const delay = state.networkMode === 'slow3g' ? 1500 : (state.networkMode === 'offline' ? 300 : 200);
+          
+          setTimeout(() => {
+            const result = operationCallback();
+            resolve(result);
+          }, delay);
+        });
+      }
+
+      // --- FORM VALIDATION (Pattern & 10-Digit Validation) ---
+      function validateForm() {
+        let isValid = true;
+
+        // 1. Pet Name
+        const petInput = document.getElementById('input-pet-name');
+        const petGroup = document.getElementById('group-pet-name');
+        if (!petInput.value.trim()) {
+          petGroup.classList.add('has-error');
+          petInput.setAttribute('aria-invalid', 'true');
+          isValid = false;
+        } else {
+          petGroup.classList.remove('has-error');
+          petInput.removeAttribute('aria-invalid');
+        }
+
+        // 2. Applicant Name
+        const applicantInput = document.getElementById('input-applicant-name');
+        const applicantGroup = document.getElementById('group-applicant-name');
+        if (!applicantInput.value.trim()) {
+          applicantGroup.classList.add('has-error');
+          applicantInput.setAttribute('aria-invalid', 'true');
+          isValid = false;
+        } else {
+          applicantGroup.classList.remove('has-error');
+          applicantInput.removeAttribute('aria-invalid');
+        }
+
+        // 3. Contact Validation (10-digit Phone OR Email)
+        const contactInput = document.getElementById('input-contact');
+        const contactGroup = document.getElementById('group-contact');
+        const contactVal = contactInput.value.trim();
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^\d{10}$/;
+
+        if (!contactVal || (!phoneRegex.test(contactVal) && !emailRegex.test(contactVal))) {
+          contactGroup.classList.add('has-error');
+          contactInput.setAttribute('aria-invalid', 'true');
+          isValid = false;
+        } else {
+          contactGroup.classList.remove('has-error');
+          contactInput.removeAttribute('aria-invalid');
+        }
+
+        return isValid;
+      }
+
+      // --- RENDER ENGINE ---
+      function render() {
+        // Toggle Offline Alert Banner
+        if (state.networkMode === 'offline') {
+          offlineBanner.style.display = 'flex';
+        } else {
+          offlineBanner.style.display = 'none';
+        }
+
+        const filteredData = state.queue.filter(item => {
+          const q = state.filterQuery.toLowerCase();
+          return item.petName.toLowerCase().includes(q) || item.applicantName.toLowerCase().includes(q);
+        });
+
+        countBadge.textContent = `${filteredData.length} entries`;
+
+        // 1. Loading State
+        if (state.isLoading) {
+          mountPoint.innerHTML = `
+            <div class="state-container" role="status" aria-label="Loading queue items">
+              <div class="spinner" aria-hidden="true"></div>
+              <p>Fetching queue records...</p>
+            </div>
+          `;
+          return;
+        }
+
+        // 2. Empty State
+        if (filteredData.length === 0) {
+          mountPoint.innerHTML = `
+            <div class="state-container" role="status">
+              <p style="font-weight: 600;">No adoption queue data found.</p>
+              <p style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 4px;">
+                ${state.filterQuery ? 'Try clearing your search query.' : 'Submit an application using the form.'}
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        // 3. Queue List Rendering
+        const ul = document.createElement('ul');
+        ul.className = 'queue-list';
+        ul.setAttribute('aria-label', 'Adoption queue list');
+
+        filteredData.forEach((item) => {
+          const li = document.createElement('li');
+          li.className = 'queue-item';
+
+          const offlineBadgeHtml = item.savedOffline ? `<span class="badge badge-offline">Offline Saved</span>` : '';
+
+          li.innerHTML = `
+            <div class="queue-info">
+              <h3>
+                ${sanitizeInput(item.petName)} 
+                <span class="badge">${sanitizeInput(item.priority)}</span>
+                ${offlineBadgeHtml}
+              </h3>
+              <div class="queue-meta">
+                <strong>Applicant:</strong> ${sanitizeInput(item.applicantName)} | 
+                <strong>Contact:</strong> ${sanitizeInput(item.contact)}
+              </div>
+              <div class="queue-meta" style="font-size: 0.75rem;">
+                Logged: ${new Date(item.timestamp).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <button 
+                class="btn btn-secondary remove-btn" 
+                data-id="${item.id}"
+                aria-label="Remove entry for ${sanitizeInput(item.applicantName)} adopting ${sanitizeInput(item.petName)}">
+                Complete / Remove
+              </button>
+            </div>
+          `;
+
+          ul.appendChild(li);
+        });
+
+        mountPoint.innerHTML = '';
+        mountPoint.appendChild(ul);
+      }
+
+      // --- EVENT HANDLERS ---
+
+      // Form Submit Workflow (Offline First handling)
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        if (!validateForm()) {
+          logTelemetry('Form Submission Failed - Validation Error');
+          announceToSR('Form submission failed. Please fix highlighted errors.');
+          return;
+        }
+
+        const isOffline = state.networkMode === 'offline';
+
+        const newEntry = {
+          id: 'q_' + Date.now(),
+          petName: sanitizeInput(document.getElementById('input-pet-name').value),
+          applicantName: sanitizeInput(document.getElementById('input-applicant-name').value),
+          contact: sanitizeInput(document.getElementById('input-contact').value),
+          priority: sanitizeInput(document.getElementById('select-priority').value),
+          timestamp: new Date().toISOString(),
+          savedOffline: isOffline
+        };
+
+        state.isLoading = true;
+        render();
+
+        await simulateNetworkOperation(() => {
+          state.queue.unshift(newEntry);
+          persistState();
+        });
+
+        logTelemetry('Adoption Interest Queue Entry Added', { id: newEntry.id, pet: newEntry.petName, mode: state.networkMode });
+        
+        if (isOffline) {
+          announceToSR(`Saved offline locally: ${newEntry.applicantName} for ${newEntry.petName}.`);
+        } else {
+          announceToSR(`Successfully added ${newEntry.applicantName} to the queue for ${newEntry.petName}.`);
+        }
+        
+        form.reset();
+        state.isLoading = false;
+        render();
+      });
+
+      // Removal Handler
+      mountPoint.addEventListener('click', async function (e) {
+        if (e.target.classList.contains('remove-btn')) {
+          const entryId = e.target.getAttribute('data-id');
+          
+          state.isLoading = true;
+          render();
+
+          await simulateNetworkOperation(() => {
+            state.queue = state.queue.filter(item => item.id !== entryId);
+            persistState();
+          });
+
+          logTelemetry('Adoption Queue Entry Processed', { id: entryId, mode: state.networkMode });
+          announceToSR('Queue entry successfully updated and removed.');
+          
+          state.isLoading = false;
+          render();
+        }
+      });
+
+      // Filter Search Input Handler
+      searchInput.addEventListener('input', function (e) {
+        state.filterQuery = e.target.value.trim();
+        render();
+      });
+
+      // Network Simulator Toggle
+      networkSelect.addEventListener('change', function (e) {
+        state.networkMode = e.target.value;
+        logTelemetry('Simulated Network Mode Changed', { mode: state.networkMode });
+        render();
+      });
+
+      // Real Browser Offline/Online Event Listeners
+      window.addEventListener('online', () => {
+        state.networkMode = 'online';
+        networkSelect.value = 'online';
+        announceToSR('Connection restored. Syncing local queue.');
+        render();
+      });
+
+      window.addEventListener('offline', () => {
+        state.networkMode = 'offline';
+        networkSelect.value = 'offline';
+        announceToSR('Connection lost. Operating in offline storage mode.');
+        render();
+      });
+
+      // --- INITIALIZE APP ---
+      logTelemetry('Adoption Interest Queue Application Initialized');
+      render();
+
+    })();
+  </script>
+</body>
+</html>
